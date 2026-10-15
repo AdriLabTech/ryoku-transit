@@ -23,7 +23,11 @@ import androidx.compose.ui.semantics.*
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.ryoku.transit.AppViewModel
+import com.ryoku.transit.WaitingService
 import com.ryoku.transit.data.*
+import com.ryoku.transit.domain.Basis
+import com.ryoku.transit.domain.Evaluation
+import com.ryoku.transit.domain.ObservationSource
 import com.ryoku.transit.domain.*
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -162,16 +166,39 @@ fun StopDetailScreen(vm: AppViewModel, stopId: String, onBack: () -> Unit, onLin
                         FavoriteToggle(vm.favorites.contains(stopId), { vm.toggleFavorite(stopId) })
                     }
                 }
-                item { Column(verticalArrangement = Arrangement.spacedBy(Space.x2)) { Spacer(Modifier.height(Space.x1)); CoverageNote(vm, result, s); LiveNote() } }
+                item { Column(verticalArrangement = Arrangement.spacedBy(Space.x2)) { Spacer(Modifier.height(Space.x1)); CoverageNote(vm, result, s); LiveNote(); WaitingControl(stop) } }
                 item { SectionLabel(1, "Próximas salidas", Modifier.padding(top = Space.x2)) }
                 when (result) {
                     is ArrivalCalculator.Result.Ok ->
                         if (result.arrivals.isEmpty()) item { EmptyState("Sin salidas en las próximas 3 horas", "No hay servicio programado en ese intervalo.") }
-                        else items(result.arrivals, key = { "${it.tripId}-${it.scheduledSec}" }) { ArrivalRow(it) }
+                        else items(result.arrivals, key = { "${it.tripId}-${it.scheduledSec}" }) { a -> ArrivalRow(a, vm.key(a, stopId) in vm.observedKeys, { ago -> vm.recordArrival(a, stopId, ago) }) }
                     else -> {}
                 }
             }
         }
+    }
+}
+
+/** Activa el modo «estoy esperando aquí»: detecta la subida al bus y pide confirmar la línea. */
+@Composable
+fun WaitingControl(stop: Stop) {
+    val ctx = LocalContext.current
+    val running by WaitingService.running.collectAsState()
+    var msg by remember { mutableStateOf<String?>(null) }
+    val perms = buildList { add(Manifest.permission.ACCESS_FINE_LOCATION); if (android.os.Build.VERSION.SDK_INT >= 33) add(Manifest.permission.POST_NOTIFICATIONS) }.toTypedArray()
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { r ->
+        if (r[Manifest.permission.ACCESS_FINE_LOCATION] == true) { WaitingService.start(ctx, stop.id, stop.name, stop.lat, stop.lon); msg = null }
+        else msg = "Sin permiso de ubicación precisa: el modo automático no puede funcionar. Puedes anotar a mano."
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(Space.x2)) {
+        if (running == stop.id) {
+            StatusPill(Tone.Info, "Esperando aquí · máx. 25 min")
+            GhostButton("Cancelar modo esperando", { WaitingService.stop(ctx) }, Modifier.fillMaxWidth())
+        } else {
+            GhostButton("Estoy esperando aquí (anotar mi viaje solo)", { launcher.launch(perms) }, Modifier.fillMaxWidth())
+            RText("Usa tu ubicación mientras esté activo (máx. 25 min). No se guarda ni se envía: solo se anota la hora en que sales de la parada a velocidad de autobús, y tú confirmas la línea.", Ryoku.t.small, Ryoku.c.inkMuted)
+        }
+        msg?.let { RText(it, Ryoku.t.small, Ryoku.c.error) }
     }
 }
 
@@ -266,7 +293,7 @@ fun FavoritesScreen(vm: AppViewModel, onStop: (String) -> Unit, onStatus: () -> 
             LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(Space.x4), verticalArrangement = Arrangement.spacedBy(Space.x3)) {
                 items(vm.favorites, key = { it }) { id ->
                     val stop = s.stop(id) ?: return@items
-                    val res = remember(vm.now, id, vm.allowReference) { vm.arrivals(id, 3) }
+                    val res = remember(vm.now, id, vm.allowReference) { vm.arrivals(id, 3, java.time.Duration.ZERO) }
                     Card(onClick = { onStop(id) }) {
                         RText(stop.name, Ryoku.t.bodyBold, maxLines = 2)
                         RText("Parada ${stop.code}", Ryoku.t.small, Ryoku.c.inkMuted)
@@ -363,13 +390,51 @@ fun StatusScreen(vm: AppViewModel, onBack: () -> Unit) {
                     Cap("Ocupación", Tone.Error, "sin fuente accesible")
                 }
                 RText("Detalle y motivos en docs/DATA_SOURCES.md. Pendiente: respuesta de AUCORSA a la solicitud de acceso a su servicio web.", Ryoku.t.small, Ryoku.c.inkMuted)
-                SectionLabel(3, "Tema")
+                SectionLabel(3, "Aprendizaje")
+                LearningCard(vm)
+                SectionLabel(4, "Tema")
                 Row(horizontalArrangement = Arrangement.spacedBy(Space.x2)) {
                     GhostButton("Grafito", { vm.updateTheme(ThemeMode.GRAFITO) }, selected = vm.theme == ThemeMode.GRAFITO)
                     GhostButton("Washi", { vm.updateTheme(ThemeMode.WASHI) }, selected = vm.theme == ThemeMode.WASHI)
                 }
                 Spacer(Modifier.height(Space.x6))
             }
+        }
+    }
+}
+
+@Composable
+private fun LearningCard(vm: AppViewModel) {
+    var confirmClear by remember { mutableStateOf(false) }
+    Card {
+        RText("Tus anotaciones comparan la hora mostrada con la llegada real. El ajuste solo se aplica si, evaluado en orden cronológico (cada anotación predicha con las anteriores), mejora al horario un 5 % o más.", Ryoku.t.small, Ryoku.c.inkMuted)
+        Spacer(Modifier.height(Space.x2))
+        Kv("Anotaciones", "${vm.observations.size} (${vm.observations.count { it.source == ObservationSource.MANUAL }} a mano, ${vm.observations.count { it.source == ObservationSource.AUTO_CONFIRMED }} auto)")
+        for (b in Basis.entries) {
+            val n = vm.observations.count { it.basis == b && it.plausible }
+            val ev = vm.evaluations[b]
+            val label = if (b == Basis.SCHEDULED) "Horario vigente" else "Horario de referencia"
+            Spacer(Modifier.height(Space.x2))
+            RText(label.uppercase(), Ryoku.t.label, Ryoku.c.inkMuted)
+            Kv("Válidas", "$n")
+            if (ev == null) StatusPill(Tone.Warn, "Faltan datos: ${n}/${Evaluation.MIN_TRAIN + 1}")
+            else {
+                Kv("Evaluadas", "${ev.n}")
+                Kv("Error horario", "%.1f min (sesgo %+.1f)".format(ev.maeSchedule / 60, ev.biasSchedule / 60))
+                Kv("Error ajuste", "%.1f min (sesgo %+.1f)".format(ev.maeModel / 60, ev.biasModel / 60))
+                if (ev.enabled) StatusPill(Tone.Ok, "Ajuste activo") else StatusPill(Tone.Warn, if (ev.n < Evaluation.MIN_EVAL) "Aún pocas: ${ev.n}/${Evaluation.MIN_EVAL}" else "Aún no mejora al horario")
+            }
+        }
+        Spacer(Modifier.height(Space.x3))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            RText("Aplicar ajuste", Ryoku.t.bodyBold, modifier = Modifier.weight(1f))
+            GhostButton(if (vm.adjustEnabled) "Sí" else "No", { vm.updateAdjust(!vm.adjustEnabled) }, selected = vm.adjustEnabled)
+        }
+        Spacer(Modifier.height(Space.x2))
+        if (!confirmClear) GhostButton("Borrar anotaciones…", { confirmClear = true }, Modifier.fillMaxWidth())
+        else Row(horizontalArrangement = Arrangement.spacedBy(Space.x2)) {
+            GhostButton("Cancelar", { confirmClear = false }, Modifier.weight(1f))
+            GhostButton("Borrar todo", { vm.clearObservations(); confirmClear = false }, Modifier.weight(1f))
         }
     }
 }

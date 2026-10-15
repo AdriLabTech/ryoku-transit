@@ -13,6 +13,8 @@ import com.ryoku.transit.ui.ThemeMode
 class MainActivity : ComponentActivity() {
     private val vm: AppViewModel by viewModels()
 
+    override fun onResume() { super.onResume(); vm.refreshPending(); vm.reloadLearning() }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {

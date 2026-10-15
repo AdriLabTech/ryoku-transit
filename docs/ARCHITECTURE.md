@@ -16,6 +16,9 @@ tools/build_db.py ──► app/src/main/assets/transit.db (SQLite, 11 MB)
 - La UI solo ve `Arrival`, `Stop`, `Route`, `FeedInfo`: ningún detalle del proveedor.
 - Zona horaria: `Europe/Madrid` para mostrar; los tiempos GTFS se tratan como segundos desde «mediodía − 12 h» del día de servicio (robusto ante el cambio horario), con soporte de horas >24:00 (consulta del día anterior desplazado 86 400 s).
 
+## Aprendizaje
+`domain/Learning.kt` (observaciones, modelo, evaluación), `domain/BoardingDetector.kt`, `data/ObservationStore.kt` (SQLite local), `WaitingService` (primer plano, `location`, ≤ 25 min). Ver [LEARNING.md](LEARNING.md).
+
 ## Punto de extensión para el AUCORSA autorizado
 Hoy la única capacidad de datos es `Capability.{STATIC_NETWORK, SCHEDULED_ARRIVALS, SERVICE_NOTICES}`. Al obtener acceso, se añadirá una fuente de llegadas que devuelva `Arrival` con una nueva `Basis.LIVE` y marca temporal de la fuente y de ingestión, y la UI ya distingue la base de cada hora. **No** se ha creado esa interfaz vacía: se dibujará con el contrato real (YAGNI y «sin capacidades ficticias»).
 

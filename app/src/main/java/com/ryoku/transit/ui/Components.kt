@@ -141,29 +141,57 @@ fun LoadingBlock(label: String = "Cargando", modifier: Modifier = Modifier) {
     }
 }
 
-/** Fila de llegada: minutos grandes y fijos a la izquierda, línea y destino, hora programada y base de la hora. */
+/**
+ * Fila de llegada: minutos grandes y fijos a la izquierda, línea y destino, hora y base de la hora.
+ * Al tocarla se despliega el panel para anotar cuándo llegó realmente (alimenta el aprendizaje).
+ */
 @Composable
-fun ArrivalRow(a: Arrival, modifier: Modifier = Modifier) {
+fun ArrivalRow(a: Arrival, observed: Boolean, onRecord: (minutesAgo: Int) -> Unit, modifier: Modifier = Modifier) {
     val c = Ryoku.c
+    var open by remember(a.tripId, a.serviceDate) { mutableStateOf(false) }
     val ref = a.basis == Basis.REFERENCE
-    val hhmm = "%02d:%02d".format((a.scheduledSec / 3600) % 24, (a.scheduledSec / 60) % 60)
-    val minutesText = if (a.minutes == 0) "ya" else "${a.minutes}"
+    val eff = a.adjustedMinutes ?: a.minutes
+    fun hm(sec: Int) = "%02d:%02d".format((sec / 3600) % 24, (sec / 60) % 60)
+    val hhmm = hm(a.scheduledSec)
+    val big = when { eff < 0 -> "¿pasó?"; eff == 0 -> "ya"; else -> "$eff" }
+    val tag = when {
+        a.adjustedSec != null -> "$hhmm → ≈${hm(a.adjustedSec)} · AJUSTADO (${a.adjustSupport} obs.)"
+        a.minutes < 0 -> "$hhmm · programado hace ${-a.minutes} min" + if (ref) " · REF" else ""
+        ref -> "$hhmm · REF ${a.serviceDate.format(DateTimeFormatter.ofPattern("dd/MM"))}"
+        else -> "$hhmm · HORARIO"
+    } + if (observed) " · ✓ anotado" else ""
+    val tagColor = when { a.adjustedSec != null -> c.secondary; ref -> c.warn; else -> c.inkMuted }
     val desc = "Línea ${a.routeShortName} hacia ${a.headsign}, " +
-        (if (a.minutes == 0) "llega ahora" else "en ${a.minutes} minutos") + ", salida programada a las $hhmm, " +
-        if (ref) "horario de referencia, no es información de hoy" else "horario publicado, no es posición en vivo"
-    Row(
-        modifier.fillMaxWidth().heightIn(min = 64.dp).clip(Shape).background(c.raised)
-            .border(1.dp, if (ref) c.line2 else c.line1, Shape).padding(Space.x3).semantics(mergeDescendants = true) { contentDescription = desc },
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.x3),
-    ) {
-        Row(Modifier.width(84.dp), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(Space.x1)) {
-            RText(minutesText, Ryoku.t.minutes, if (ref) c.inkDim else c.ink)
-            if (a.minutes > 0) RText("min", Ryoku.t.small, c.inkMuted, Modifier.padding(bottom = 4.dp))
+        (when { eff < 0 -> "debería haber pasado ya"; eff == 0 -> "llega ahora"; else -> "en $eff minutos" }) +
+        ", salida programada a las $hhmm, " +
+        (if (a.adjustedSec != null) "corregida con ${a.adjustSupport} observaciones propias, " else "") +
+        (if (ref) "horario de referencia, no es información de hoy" else "horario publicado, no es posición en vivo") +
+        (if (observed) ", ya anotada" else ", toca para anotar cuándo llegó")
+    Column(modifier.fillMaxWidth().clip(Shape).background(c.raised).border(1.dp, if (open) c.line3 else if (ref) c.line2 else c.line1, Shape)) {
+        Row(
+            Modifier.fillMaxWidth().heightIn(min = 64.dp).clickable(role = Role.Button, onClickLabel = "Anotar llegada real") { open = !open }
+                .padding(Space.x3).semantics(mergeDescendants = true) { contentDescription = desc },
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.x3),
+        ) {
+            Row(Modifier.width(84.dp), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(Space.x1)) {
+                RText(big, if (eff < 0) Ryoku.t.h3 else Ryoku.t.minutes, if (eff < 0) c.warn else if (ref) c.inkDim else c.ink)
+                if (eff > 0) RText("min", Ryoku.t.small, c.inkMuted, Modifier.padding(bottom = 4.dp))
+            }
+            RouteBadge(a.routeShortName, a.routeColor)
+            Column(Modifier.weight(1f)) {
+                RText(a.headsign, Ryoku.t.bodyBold, c.ink, maxLines = 1)
+                RText(tag, Ryoku.t.small, tagColor, maxLines = 2)
+            }
         }
-        RouteBadge(a.routeShortName, a.routeColor)
-        Column(Modifier.weight(1f)) {
-            RText(a.headsign, Ryoku.t.bodyBold, c.ink, maxLines = 1)
-            RText(if (ref) "$hhmm · REF ${a.serviceDate.format(DateTimeFormatter.ofPattern("dd/MM"))}" else "$hhmm · HORARIO", Ryoku.t.small, if (ref) c.warn else c.inkMuted)
+        if (open) Column(Modifier.fillMaxWidth().padding(start = Space.x3, end = Space.x3, bottom = Space.x3), verticalArrangement = Arrangement.spacedBy(Space.x2)) {
+            RText("¿CUÁNDO LLEGÓ DE VERDAD?", Ryoku.t.label, c.inkMuted)
+            Row(horizontalArrangement = Arrangement.spacedBy(Space.x2)) {
+                GhostButton("Ahora", { onRecord(0); open = false }, Modifier.weight(1f))
+                GhostButton("−1 min", { onRecord(1); open = false }, Modifier.weight(1f))
+                GhostButton("−2 min", { onRecord(2); open = false }, Modifier.weight(1f))
+                GhostButton("−5 min", { onRecord(5); open = false }, Modifier.weight(1f))
+            }
+            RText("Se guarda solo en este móvil. Con suficientes anotaciones, la app corrige sus horas.", Ryoku.t.small, c.inkFaint)
         }
     }
 }

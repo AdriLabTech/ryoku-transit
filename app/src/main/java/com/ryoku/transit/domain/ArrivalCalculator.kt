@@ -45,6 +45,7 @@ class ArrivalCalculator(
         allowReference: Boolean,
         horizon: Duration = Duration.ofHours(3),
         limit: Int = 30,
+        lookback: Duration = Duration.ZERO,
     ): Result {
         val today = now.toLocalDate()
         val status = feed.status(today)
@@ -54,26 +55,30 @@ class ArrivalCalculator(
             else -> return Result.NoCoverage(status)
         }
         val nowSec = secondsOfDay(now)
+        val fromSec = nowSec - lookback.seconds.toInt()
         val toSec = nowSec + horizon.seconds.toInt()
         val out = ArrayList<Arrival>()
         // Día de servicio anterior (viajes que pasan de medianoche) y día de servicio actual.
         for ((svcDate, offset) in listOf(date.minusDays(1) to -86400, date to 0)) {
             val activeToday = calendar.activeServices(svcDate)
             if (activeToday.isEmpty()) continue
-            for (st in source.stopTimes(stopId, nowSec - offset, toSec - offset)) {
+            for (st in source.stopTimes(stopId, fromSec - offset, toSec - offset)) {
                 if (st.serviceId !in activeToday) continue
                 val sec = st.depSec + offset
-                if (sec < nowSec) continue
+                if (sec < fromSec) continue
                 val route = source.route(st.routeId) ?: continue
                 out += Arrival(
                     route.id, route.shortName, route.color, route.textColor, st.headsign, st.direction,
-                    st.tripId, sec, (sec - nowSec) / 60, svcDate, basis,
+                    st.tripId, sec, Math.floorDiv(sec - nowSec, 60), svcDate, basis,
                 )
             }
         }
         out.sortWith(compareBy({ it.scheduledSec }, { it.routeShortName }))
         return Result.Ok(out.take(limit), basis, date)
     }
+
+    /** Segundos de [t] en el marco de día de servicio usado por [Arrival.scheduledSec]. */
+    fun serviceSeconds(t: ZonedDateTime): Int = secondsOfDay(t)
 
     private fun secondsOfDay(t: ZonedDateTime): Int {
         // Segundos desde el inicio del día de servicio (mediodía − 12 h, regla GTFS), robusto ante DST.

@@ -40,7 +40,15 @@ data class Arrival(
     val minutes: Int,
     val serviceDate: LocalDate,
     val basis: Basis,
-)
+    /** Hora (segundos de servicio) corregida por el modelo aprendido; null si no hay ajuste validado. */
+    val adjustedSec: Int? = null,
+    val adjustedMinutes: Int? = null,
+    /** Observaciones de la línea en las que se basa el ajuste. */
+    val adjustSupport: Int = 0,
+) {
+    /** Segundos efectivos para ordenar: ajustados si existen. */
+    val effectiveSec: Int get() = adjustedSec ?: scheduledSec
+}
 
 enum class FeedStatus { VALID, EXPIRED, NOT_YET_VALID }
 
