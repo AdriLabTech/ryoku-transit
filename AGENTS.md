@@ -7,3 +7,4 @@
 - Verificación: `./gradlew :app:testDebugUnitTest` y, con emulador, `:app:connectedDebugAndroidTest`; después mirar capturas (`tools/shot.sh`).
 - Sin secretos en el repo. No usar endpoints internos de aucorsa.es (`lightapi`) ni raspar Google Maps: ver `docs/DATA_SOURCES.md`.
 - Commits en español, estilo `docs:`/`feat:`/`fix:`. Sin `Co-Authored-By`.
+- Distribución: APK firmado en GitHub Releases y autoactualización en la app; ver `docs/RELEASING.md`. La versión vive solo en `appVersion` de `app/build.gradle.kts`. Nunca commitear `keystore.properties` ni `*.jks`.

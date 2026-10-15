@@ -392,7 +392,9 @@ fun StatusScreen(vm: AppViewModel, onBack: () -> Unit) {
                 RText("Detalle y motivos en docs/DATA_SOURCES.md. Pendiente: respuesta de AUCORSA a la solicitud de acceso a su servicio web.", Ryoku.t.small, Ryoku.c.inkMuted)
                 SectionLabel(3, "Aprendizaje")
                 LearningCard(vm)
-                SectionLabel(4, "Tema")
+                SectionLabel(4, "Versión")
+                UpdateCard(vm)
+                SectionLabel(5, "Tema")
                 Row(horizontalArrangement = Arrangement.spacedBy(Space.x2)) {
                     GhostButton("Grafito", { vm.updateTheme(ThemeMode.GRAFITO) }, selected = vm.theme == ThemeMode.GRAFITO)
                     GhostButton("Washi", { vm.updateTheme(ThemeMode.WASHI) }, selected = vm.theme == ThemeMode.WASHI)
@@ -400,6 +402,25 @@ fun StatusScreen(vm: AppViewModel, onBack: () -> Unit) {
                 Spacer(Modifier.height(Space.x6))
             }
         }
+    }
+}
+
+@Composable
+private fun UpdateCard(vm: AppViewModel) {
+    val u = vm.update
+    Card {
+        Kv("Instalada", vm.installedVersion)
+        when (u) {
+            is UpdateState.Checking -> StatusPill(Tone.Info, "Buscando…")
+            is UpdateState.UpToDate -> StatusPill(Tone.Ok, "Al día")
+            is UpdateState.Available -> StatusPill(Tone.Info, "Disponible ${u.info.version}")
+            is UpdateState.Downloading -> StatusPill(Tone.Info, "Descargando ${u.percent} %")
+            is UpdateState.Ready -> StatusPill(Tone.Info, "Lista ${u.info.version}: instala desde el aviso superior")
+            is UpdateState.Failed -> StatusPill(Tone.Error, u.reason)
+            UpdateState.Idle -> {}
+        }
+        Spacer(Modifier.height(Space.x2))
+        GhostButton("Buscar actualizaciones", { vm.checkUpdate(manual = true) })
     }
 }
 

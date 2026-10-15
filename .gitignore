@@ -8,3 +8,6 @@ data/gtfs-raw/
 data/work/
 *.keystore
 .env
+keystore.properties
+*.jks
+dist/

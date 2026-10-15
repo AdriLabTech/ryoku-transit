@@ -48,6 +48,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private val noticesSource = NoticesSource(java.io.File(app.cacheDir, "notices.xml"))
 
+    // ── Actualizaciones (GitHub Releases) ──
+    private val updater = UpdateSource(app)
+    var update by mutableStateOf<UpdateState>(UpdateState.Idle); private set
+    var updateError by mutableStateOf<String?>(prefs.getString(ApkInstaller.PREF_ERROR, null)); private set
+    val installedVersion: String get() = updater.current().first.toString()
+    private val debuggable = app.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0
+
     init {
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -59,6 +66,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             } catch (e: Exception) { loadError = e.message ?: e.javaClass.simpleName }
         }
         refreshNotices()
+        autoCheckUpdate()
         reloadLearning()
         refreshPending()
         learnPrefs.registerOnSharedPreferenceChangeListener(pendingListener)
@@ -69,6 +77,60 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         notices = NoticesState.Loading
         viewModelScope.launch(Dispatchers.IO) { notices = noticesSource.fetch() }
     }
+
+    /** Comprobación automática: como mucho cada 6 h y nunca en builds de depuración (los tests no deben tocar la red). */
+    fun autoCheckUpdate() {
+        if (debuggable) return
+        val busy = update is UpdateState.Checking || update is UpdateState.Downloading
+        if (busy || System.currentTimeMillis() - prefs.getLong("update_checked", 0L) < UpdateConfig.CHECK_EVERY_MS) return
+        checkUpdate(manual = false)
+    }
+
+    /**
+     * Busca una versión nueva y, si la hay y la red no es de datos móviles, la descarga ya.
+     * Con [manual] descarga siempre y muestra «al día» cuando no hay nada.
+     */
+    fun checkUpdate(manual: Boolean = true) {
+        if (update is UpdateState.Checking || update is UpdateState.Downloading) return
+        update = UpdateState.Checking
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val (current, _) = updater.current()
+                val latest = updater.latest()
+                prefs.edit().putLong("update_checked", System.currentTimeMillis()).apply()
+                if (latest == null || latest.version <= current) {
+                    updater.cleanup()
+                    update = if (manual) UpdateState.UpToDate(current) else UpdateState.Idle
+                    return@launch
+                }
+                if (!manual && updater.isMetered()) { update = UpdateState.Available(latest); return@launch }
+                downloadUpdate(latest)
+            } catch (e: Exception) {
+                update = if (manual) UpdateState.Failed(e.message ?: "sin conexión") else UpdateState.Idle
+            }
+        }
+    }
+
+    fun downloadUpdate(info: ReleaseInfo) {
+        update = UpdateState.Downloading(info, 0)
+        viewModelScope.launch(Dispatchers.IO) {
+            update = try {
+                val file = updater.download(info) { update = UpdateState.Downloading(info, it) }
+                updater.verifyArchive(file, info)?.let { file.delete(); UpdateState.Failed(it) } ?: UpdateState.Ready(info, file)
+            } catch (e: Exception) { UpdateState.Failed(e.message ?: "descarga fallida") }
+        }
+    }
+
+    /** Lanza la instalación del APK ya descargado. Devuelve `false` si falta el permiso de instalar apps (se abre el ajuste). */
+    fun installUpdate(context: Context) {
+        val ready = update as? UpdateState.Ready ?: return
+        if (!ApkInstaller.ensurePermission(context)) return
+        clearUpdateError()
+        runCatching { ApkInstaller.install(context, ready.file) }.onFailure { update = UpdateState.Failed(it.message ?: "no se pudo instalar") }
+    }
+
+    fun refreshUpdateError() { updateError = prefs.getString(ApkInstaller.PREF_ERROR, null) }
+    private fun clearUpdateError() { prefs.edit().remove(ApkInstaller.PREF_ERROR).apply(); updateError = null }
 
     fun toggleFavorite(stopId: String) { favorites = favs.toggle(stopId) }
     fun updateAllowReference(v: Boolean) { allowReference = v; prefs.edit().putBoolean("allowReference", v).apply() }

@@ -11,6 +11,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.*
 import com.ryoku.transit.AppViewModel
+import com.ryoku.transit.data.UpdateState
 
 private data class Tab(val route: String, val label: String)
 private val TABS = listOf(Tab("stops", "Paradas"), Tab("lines", "Líneas"), Tab("map", "Mapa"), Tab("favs", "Favoritas"), Tab("notices", "Avisos"))
@@ -24,6 +25,7 @@ fun RyokuApp(vm: AppViewModel) {
         fun tab(r: String) = nav.navigate(r) { popUpTo(nav.graph.findStartDestination().id) { saveState = true }; launchSingleTop = true; restoreState = true }
         val status = { nav.navigate("status") }
         Column(Modifier.fillMaxSize().background(Ryoku.c.paper).statusBarsPadding()) {
+            UpdateBanner(vm)
             vm.pending?.let { BoardingConfirm(vm, it) }
             NavHost(nav, "stops", Modifier.weight(1f)) {
                 composable("stops") { StopsScreen(vm, { nav.navigate("stop/$it") }, status) }
@@ -74,5 +76,28 @@ private fun BoardingConfirm(vm: AppViewModel, ev: com.ryoku.transit.domain.Board
             if (lines.isEmpty()) RText("Sin líneas programadas en ese momento.", Ryoku.t.small, Ryoku.c.inkMuted)
         }
         GhostButton("No era un autobús", { vm.dismissPending() })
+    }
+}
+
+/** Aviso de versión nueva en la parte superior: aparece solo cuando hay algo que hacer o que decir. */
+@Composable
+private fun UpdateBanner(vm: AppViewModel) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val u = vm.update
+    val mb = { b: Long -> "%.1f MB".format(b / 1_048_576.0) }
+    Column(Modifier.fillMaxWidth().padding(horizontal = Space.x4), verticalArrangement = Arrangement.spacedBy(Space.x2)) {
+        when (u) {
+            is UpdateState.Ready -> {
+                Banner(Tone.Info, "Versión ${u.info.version} lista", "Descargada y verificada. Android te pedirá confirmar la instalación; la app se reiniciará.")
+                GhostButton("Instalar ahora", { vm.installUpdate(ctx) }, selected = true)
+            }
+            is UpdateState.Available -> {
+                Banner(Tone.Info, "Versión ${u.info.version} disponible", "Estás con datos móviles: la descarga son ${mb(u.info.apkSize)}.")
+                GhostButton("Descargar", { vm.downloadUpdate(u.info) })
+            }
+            is UpdateState.Downloading -> Banner(Tone.Info, "Descargando versión ${u.info.version}", "${u.percent} %")
+            else -> {}
+        }
+        vm.updateError?.let { Banner(Tone.Error, "No se pudo actualizar", it) }
     }
 }
