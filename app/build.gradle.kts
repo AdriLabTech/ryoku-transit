@@ -6,7 +6,7 @@ plugins {
 }
 
 // Única fuente de versión: versionName `mayor.menor.parche`; versionCode se deriva y siempre crece con ella.
-val appVersion = "0.1.0"
+val appVersion = "0.1.1"
 val (vMajor, vMinor, vPatch) = appVersion.split(".").map { it.toInt() }
 
 // Firma de release: keystore.properties (fuera de git) con storeFile, storePassword, keyAlias y keyPassword.
