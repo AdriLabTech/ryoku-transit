@@ -17,7 +17,7 @@ Grafito (por defecto) y Washi (opcional, desde ESTADO). Valores iguales a la not
 | Favorita | `gold` ★ |
 
 ## Tipografía
-Komiki Mono (única; Regular y Bold), escala Display 40 · H1 28 · H2 20 · H3 16 · Cuerpo 14 · Pequeño 12 · Etiqueta 11 (mayúsculas, tracking .08). Al ser monoespaciada, las cifras de los minutos no bailan al actualizarse. Los minutos usan el tamaño H1 y son lo más grande de cada fila. *Licencia de Komiki Mono no revisada*: la fuente está empaquetada solo para esta app privada y no debe distribuirse.
+Komiki Mono (única; Regular y Bold), escala Display 40 · H1 28 · H2 20 · H3 16 · Cuerpo 14 · Pequeño 12 · Etiqueta 11 (mayúsculas, tracking .08). Al ser monoespaciada, las cifras de los minutos no bailan al actualizarse. Los minutos usan el tamaño H1 y son lo más grande de cada fila. Komiki Mono es **MIT** (con ligaturas de Fira Code, **OFL 1.1**): redistribuible conservando los avisos, que están en `THIRD_PARTY_LICENSES.md` y dentro del APK (`assets/`). Revisado el 2026-10-15.
 
 ## Forma y movimiento
 Radio 4 dp, borde 1 dp, sin sombras (jerarquía por tono y borde), espacios en múltiplos de 4. Control mínimo 48 dp. Sin animaciones decorativas: no hay movimiento que respetar; las listas usan claves estables y la hora no cambia de tamaño al actualizar.

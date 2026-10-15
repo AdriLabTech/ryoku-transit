@@ -30,6 +30,6 @@ tools/run-emulator.sh                     # instala y abre la app
 El feed fuente se descarga de Mobility Database (espejo del NAP); ver `docs/DATA_SOURCES.md`. `data/gtfs-raw/` no se versiona.
 
 ## Documentación
-[Visión](docs/PROJECT_VISION.md) · [Investigación](docs/RESEARCH.md) · [Arquitectura](docs/ARCHITECTURE.md) · [Fuentes de datos](docs/DATA_SOURCES.md) · [Diseño](docs/DESIGN_SYSTEM.md) · [Accesibilidad](docs/ACCESSIBILITY.md) · [Predicción](docs/PREDICTION_STRATEGY.md) · [Pruebas](docs/TESTING_STRATEGY.md) · [Aprendizaje](docs/LEARNING.md) · [Guía NAP](docs/NAP_GUIA.md) · [Hoja de ruta](docs/ROADMAP.md) · [Decisiones](docs/DECISIONS.md) · [Publicar versiones](docs/RELEASING.md)
+[Visión](docs/PROJECT_VISION.md) · [Investigación](docs/RESEARCH.md) · [Arquitectura](docs/ARCHITECTURE.md) · [Fuentes de datos](docs/DATA_SOURCES.md) · [Diseño](docs/DESIGN_SYSTEM.md) · [Accesibilidad](docs/ACCESSIBILITY.md) · [Predicción](docs/PREDICTION_STRATEGY.md) · [Pruebas](docs/TESTING_STRATEGY.md) · [Aprendizaje](docs/LEARNING.md) · [Guía NAP](docs/NAP_GUIA.md) · [Hoja de ruta](docs/ROADMAP.md) · [Decisiones](docs/DECISIONS.md) · [Publicar versiones](docs/RELEASING.md) · [Licencias de terceros](THIRD_PARTY_LICENSES.md)
 
 Capturas de referencia en `docs/screenshots/` (emulador Pixel API 36).
