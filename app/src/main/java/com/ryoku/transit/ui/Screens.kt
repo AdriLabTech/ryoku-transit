@@ -37,12 +37,14 @@ private val PAD = Modifier.padding(horizontal = Space.x4)
 
 @Composable
 fun ScreenHeader(index: Int, title: String, onStatus: (() -> Unit)? = null, onBack: (() -> Unit)? = null) {
+    val ctx = LocalContext.current
+    val version = remember { runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName }.getOrNull() }
     Row(PAD.fillMaxWidth().padding(top = Space.x4, bottom = Space.x3), verticalAlignment = Alignment.CenterVertically) {
         if (onBack != null) {
             Box(Modifier.size(Size.control).clickable(role = Role.Button, onClickLabel = "Volver", onClick = onBack).semantics { contentDescription = "Volver" }, contentAlignment = Alignment.CenterStart) { RText("←", Ryoku.t.h1) }
         } else { BrandDisc(); Spacer(Modifier.width(Space.x2)) }
         Column(Modifier.weight(1f)) {
-            SectionLabel(index, if (onBack == null) "RYOKU TRANSIT" else "DETALLE")
+            SectionLabel(index, if (onBack == null) "RYOKU TRANSIT" + (version?.let { " · v$it" } ?: "") else "DETALLE")
             RText(title, Ryoku.t.h1, maxLines = 2, modifier = Modifier.semantics { heading() })
         }
         if (onStatus != null) Box(
