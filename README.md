@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/logo.png" width="128" alt="Logo de Ryoku Transit: frontal de un autobús sobre un disco bermellón"></p>
+
 # RYOKU TRANSIT
 
 App Android personal (Kotlin + Jetpack Compose) para los autobuses urbanos de AUCORSA (Córdoba). Proyecto no comercial: uso personal, aprendizaje y demostración técnica. **No es la app oficial de AUCORSA ni está afiliado a ella.**
@@ -10,12 +12,13 @@ App Android personal (Kotlin + Jetpack Compose) para los autobuses urbanos de AU
 - Mapa esquemático propio (geometrías y paradas del GTFS, sin teselas de terceros) y alternativa en lista.
 - **Aprende de tus anotaciones** (a mano o detectando que subes a un bus) y corrige las horas solo si mejora: [docs/LEARNING.md](docs/LEARNING.md).
 - Favoritas, avisos (RSS oficial de aucorsa.es) y pantalla **Estado** con diagnóstico de datos y capacidades.
+- **Se actualiza sola** desde GitHub Releases (ver «Instalar»).
 - Estilo visual **Ryoku Kami** (Grafito por defecto, Washi opcional), Komiki Mono.
 
 ## Instalar (Android 8+)
 1. Descarga el APK de la [última release](https://github.com/AdriLabTech/ryoku-transit/releases/latest).
 2. Ábrelo y permite instalar desde esa fuente. Si Play Protect avisa, «Instalar de todos modos» (la app no está en Google Play).
-3. Se **actualiza sola**: al abrirla busca versión nueva, la descarga con wifi y avisa con «Instalar ahora». También en ESTADO → Versión.
+3. Se **actualiza sola** (probado de 0.1.1 a 0.1.2): al abrir la app, como mucho cada 6 h, busca una versión nueva en las Releases de GitHub. Con wifi la descarga y la verifica (tamaño, SHA-256, misma app y firma), y avisa arriba con **«Instalar ahora»**; con datos móviles pregunta antes. Android pide confirmar la instalación y la primera vez permitir «instalar apps desconocidas» a Ryoku Transit. También puedes forzarla en ESTADO → Versión → «Buscar actualizaciones». La versión instalada aparece en la cabecera (`v0.1.2`).
 
 Cómo se firma y publica cada versión: [docs/RELEASING.md](docs/RELEASING.md).
 
