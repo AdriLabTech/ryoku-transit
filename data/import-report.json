@@ -1,0 +1,21 @@
+{
+  "meta": {
+    "source": "NAP/Mobility Database mdb-2713",
+    "sha256": "4fa3e7652467903a31a16c00f730c590cc4204c017ea26f7b2d823d85a6e97e1",
+    "timezone": "Europe/Madrid",
+    "feed_start": "20260225",
+    "feed_end": "20260331",
+    "built_at": "2026-10-15T07:04:49+00:00",
+    "files": "agency.txt,calendar.txt,calendar_dates.txt,routes.txt,shapes.txt,stop_times.txt,stops.txt,trips.txt"
+  },
+  "counts": {
+    "routes": 37,
+    "stops": 721,
+    "trips": 8780,
+    "stop_times": 202640,
+    "calendar": 456,
+    "calendar_dates": 595,
+    "shapes": 75
+  },
+  "defects": {}
+}

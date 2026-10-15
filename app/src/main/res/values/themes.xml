@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.RyokuTransit" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#211D1A</item>
+        <item name="android:statusBarColor">#211D1A</item>
+        <item name="android:navigationBarColor">#211D1A</item>
+    </style>
+</resources>
