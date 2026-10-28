@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/hero.svg" alt="ryoku-transit" width="100%"></p>
+
 <p align="center"><img src="docs/logo.png" width="128" alt="Logo de Ryoku Transit: frontal de un autobús sobre un disco bermellón"></p>
 
 # RYOKU TRANSIT
